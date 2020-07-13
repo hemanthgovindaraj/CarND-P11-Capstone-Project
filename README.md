@@ -1,6 +1,51 @@
-This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
+# Programming a Real Self-Driving Car project
 
-Please use **one** of the two installation options, either native **or** docker installation.
+## Goal of the project
+
+The goal was to implement ROS nodes with certain core functionalities of the autonomous vehicle system. This included Waypoint updation, traffic light detection and control. I used the workspace provided by udacity for my development.
+
+[//]: # (Image References)
+
+[image1]: ./examples/architecture.png "Architecture"
+[image2]: ./examples/waypoint_updater.png "Waypoint Updater"
+[image3]: ./examples/dbw_node.png "Drive by Wire"
+[image4]: ./examples/tl_detection.png "Traffic Light detection"
+
+## Architecture
+
+Below is the architecture that was followed for the project. The architecture shows the nodes and the topics communicated between the nodes.
+The main subsystems Perception, planning and control are handled with 6 nodes here.
+
+![alt text][image1]
+
+### Waypoint update partial
+
+Since the vehicle position is available in the /current_pose node and the /base_waypoints which gives the waypoints of the path are also available from the waypoint loader, the planning of the next 200 waypoints was done using these subscribed topics.The Tree method from scipy library was used to create an lookup as suggested in walkthrough which can be queried to find the current location and to estimate the next locations. Initially, i started with 200 waypoints and at a frequency of 30Hz. After looking at the latency issue which ended in late updation of the waypoints and hence the vehicle moving out of the trajectory when starting camera, i reduced the waypoints to 100. Also, the frequency was modified to 10Hz. 
+
+![alt text][image2]
+
+### Drive by Wire node implementation
+
+Next, i started with the implementation of the control part. I used the yaw controller class provided for the steering angle calculation.
+PID controller class was used for throttle control. The values for the parameters were manually tuned to Kp = 0.3, Kd=0.1 , Ki =0 . Before using the PID, i used the low pass filter to filter out the velocity incoming from the simulator as suggested in the walkthrough.
+Finally, the brake force is calculated based on the required deceleration, vehicle_mass and wheel radius.  These commands can then be published to the topics /vehicle/throttle_cmd, /vehicle/brake_cmd and /vehicle/steering_cmd .
+
+![alt text][image3]
+
+### Traffic light detection
+
+Then, i started with traffic light detection. First, i use the vehicle's location and the (x, y) coordinates for traffic lights to find the nearest visible traffic light ahead of the vehicle using the get_closest_waypoint method. This takes place in the process_traffic_lights method of tl_detector.py. The other part is to find the status of the traffic signal. I tried using the image thresholding technique to detect the red traffic signal before going to use the neural network techniques. I used the BGR image and performed thresholding which did not work well. However when i tried with the HSV format as suggested in a stack overflow discussion [https://stackoverflow.com/questions/30331944/finding-red-color-in-image-using-python-opencv], it worked out fine. Now the status and location of the traffic signal is passed through the traffic waypoint into the waypoint updater. 
+
+![alt text][image4]
+
+### Waypoint update full
+
+With the traffic light detection working, the traffic light data is then subscribed into the waypoint updater node. I then found out the distance from the traffic waypoint and start decelerating at 0.5m/s2 before reaching the traffic waypoint. If the status changes to green, then the next waypoint is updated.
+
+### Final working
+
+After implementing all the nodes mostly with the help of walkthrough, i was finally able to see the car driving autonomously around the highway track provided. It stopped at the red signal and accelerated in time after the signal shifted to green.
+
 
 ### Native Installation
 
