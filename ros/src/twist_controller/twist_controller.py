@@ -13,30 +13,34 @@ class Controller(object):
 
         # controller for yaw
         min_speed = 0.1
-        self.yaw_controller= YawController(wheel_base, steer_ratio, min_speed, max_lat_accel, max_steer_angle)
+        self.yaw_controller = YawController(wheel_base, steer_ratio, min_speed, max_lat_accel, max_steer_angle)
 
         # controller for throttle
         Kp = 0.3
         Ki = 0.1
         Kd = 0.0
         min_throttle = 0
-        max_throttle = 1.0
-        self.throttle_controller = PID(kp, ki, kd, min_throttle, max_throttle)
+        max_throttle = 0.2
+        self.throttle_controller = PID(Kp, Ki, Kd, min_throttle, max_throttle)
 
         #low pass filter for velocity
         tau = 0.5
         ts = 0.02 #50Hz
         self.vel_lpf = LowPassFilter(tau,ts)
+        tau_s = 0.5
+        ts_s = 0.02 #50Hz
+        self.steer_lpf = LowPassFilter(tau_s,ts_s)
 
         self.vehicle_mass = vehicle_mass
         self.wheel_radius = wheel_radius
         self.decel_limit = decel_limit
 
         self.last_time = rospy.get_time()
+        self.last_steering = 0
         
 
 
-    def control(self, linear_velocity, angular_velocity, current_velocity, dbw_enabled):
+    def control(self, linear_velocity, angular_velocity, current_velocity, current_angular_velocity, dbw_enabled):
         # TODO: Change the arg, kwarg list to suit your needs
         # Return throttle, brake, steer
         if not dbw_enabled:
@@ -45,7 +49,12 @@ class Controller(object):
         
         # steering control
         current_velocity = self.vel_lpf.filt(current_velocity)
+        current_angular_velocity = self.steer_lpf.filt(current_angular_velocity)
+        
+        # if abs(current_angular_velocity -angular_velocity)<0.2:
+        
         steering = self.yaw_controller.get_steering(linear_velocity,angular_velocity,current_velocity)
+        self.last_steering = steering
 
         # Throttle control
         vel_error = linear_velocity - current_velocity
