@@ -54,6 +54,8 @@ class Controller(object):
         # if abs(current_angular_velocity -angular_velocity)<0.2:
         
         steering = self.yaw_controller.get_steering(linear_velocity,angular_velocity,current_velocity)
+        # rospy.logwarn("steering requested = {}".format(steering))
+        
         self.last_steering = steering
 
         # Throttle control
